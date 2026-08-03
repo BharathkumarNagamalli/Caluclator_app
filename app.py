@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import math
 import datetime
+import os
 
 app = Flask(__name__)
 # Enable CORS for frontend communication
@@ -108,5 +109,6 @@ def clear_history():
     return jsonify({"success": True}), 200
 
 if __name__ == '__main__':
-    # Ensure the application runs on port 8080 as per requirements
-    app.run(host='0.0.0.0', port=8080)
+    # Ensure the application runs on port 8080 or the PORT environment variable
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
