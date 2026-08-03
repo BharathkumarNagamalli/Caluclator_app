@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 import math
 import datetime
 import os
@@ -8,9 +9,35 @@ app = Flask(__name__)
 # Enable CORS for frontend communication
 CORS(app)
 
-# In-memory storage for calculation history
-history = []
-history_id_counter = 1
+# Database configuration
+# Use DATABASE_URL from environment if available, otherwise fallback to local SQLite
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///calculator.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# Database Model for Calculation History
+class CalculationHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    expression = db.Column(db.String(255), nullable=False)
+    result = db.Column(db.Float, nullable=False)
+    timestamp = db.Column(db.String(50), nullable=False)
+
+    def to_dict(self):
+        # Convert float to int if it's a whole number, to match frontend expectations
+        res = self.result
+        if res.is_integer():
+            res = int(res)
+        return {
+            "id": self.id,
+            "expression": self.expression,
+            "result": res,
+            "timestamp": self.timestamp
+        }
+
+# Create tables if they don't exist
+with app.app_context():
+    db.create_all()
 
 def safe_eval(expr):
     """
@@ -49,7 +76,6 @@ def calculate():
     Endpoint to calculate a mathematical expression.
     Expects JSON: {"expression": "..."}
     """
-    global history_id_counter
     data = request.get_json()
     
     # Request validation
@@ -61,15 +87,14 @@ def calculate():
     try:
         result = safe_eval(expr)
         
-        # Add to history
-        record = {
-            "id": history_id_counter,
-            "expression": expr,
-            "result": result,
-            "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
-        }
-        history.append(record)
-        history_id_counter += 1
+        # Add to database history
+        record = CalculationHistory(
+            expression=expr,
+            result=float(result), # Store as float in DB
+            timestamp=datetime.datetime.utcnow().isoformat() + "Z"
+        )
+        db.session.add(record)
+        db.session.commit()
         
         return jsonify({
             "success": True,
@@ -78,35 +103,57 @@ def calculate():
         }), 200
     except ValueError as e:
         # Exception handling for invalid expressions or math errors
+        db.session.rollback()
         return jsonify({
             "success": False,
             "error": str(e)
         }), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": "Database error occurred"
+        }), 500
 
 @app.route('/api/history', methods=['GET'])
 def get_history():
     """
     Endpoint to retrieve the calculation history.
     """
-    return jsonify({"history": history}), 200
+    try:
+        records = CalculationHistory.query.all()
+        history = [record.to_dict() for record in records]
+        return jsonify({"history": history}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": "Database error occurred"}), 500
 
 @app.route('/api/history/<int:item_id>', methods=['DELETE'])
 def delete_history_item(item_id):
     """
     Endpoint to delete a specific item from the calculation history.
     """
-    global history
-    history = [item for item in history if item["id"] != item_id]
-    return jsonify({"success": True}), 200
+    try:
+        record = CalculationHistory.query.get(item_id)
+        if record:
+            db.session.delete(record)
+            db.session.commit()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": "Database error occurred"}), 500
 
 @app.route('/api/history', methods=['DELETE'])
 def clear_history():
     """
     Endpoint to clear all calculation history.
     """
-    global history
-    history = []
-    return jsonify({"success": True}), 200
+    try:
+        db.session.query(CalculationHistory).delete()
+        db.session.commit()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": "Database error occurred"}), 500
 
 if __name__ == '__main__':
     # Ensure the application runs on port 8080 or the PORT environment variable

@@ -1,11 +1,11 @@
 # Calculator App
 
-A full-stack calculator application featuring a web-based UI and a Python Flask backend.
+A full-stack calculator application featuring a web-based UI and a Python Flask backend with persistent database storage.
 
 ## Features
 - Basic arithmetic operations (+, -, *, /)
 - Advanced functions (square root, power)
-- History tracking
+- Persistent History tracking (using SQLite/SQLAlchemy)
 - REST API
 
 ## Local Development
@@ -23,9 +23,16 @@ A full-stack calculator application featuring a web-based UI and a Python Flask 
    ```bash
    python app.py
    ```
-   The server will start on `http://localhost:8080`.
+   The server will start on `http://localhost:8080` and automatically create a local `calculator.db` SQLite database.
 
 4. Open `ui.html` in your browser. Ensure that the `API_BASE_URL` in `ui.html` points to `http://localhost:8080`.
+
+## Database Configuration
+By default, the application uses a local SQLite database (`calculator.db`). For production, you can set the `DATABASE_URL` environment variable to connect to PostgreSQL or MySQL.
+
+```bash
+export DATABASE_URL="postgresql://user:password@localhost/dbname"
+```
 
 ## Deployment
 
