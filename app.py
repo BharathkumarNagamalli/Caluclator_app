@@ -4,17 +4,24 @@ import math
 import datetime
 
 app = Flask(__name__)
+# Enable CORS for frontend communication
 CORS(app)
 
+# In-memory storage for calculation history
 history = []
 history_id_counter = 1
 
 def safe_eval(expr):
+    """
+    Safely evaluate a mathematical expression.
+    Supports basic arithmetic (+, -, *, /) and math functions (sqrt, pow).
+    """
     allowed_names = {
         "sqrt": math.sqrt,
         "pow": math.pow,
     }
     try:
+        # Evaluate the expression without builtins for security
         result = eval(expr, {"__builtins__": {}}, allowed_names)
         if isinstance(result, (int, float)):
             # If the result is a float but has no decimal part, return as int
@@ -28,10 +35,23 @@ def safe_eval(expr):
     except Exception:
         raise ValueError("Invalid expression")
 
+@app.route('/', methods=['GET'])
+def index():
+    """
+    Root endpoint to verify the backend is running.
+    """
+    return jsonify({"message": "Calculator Backend is running."}), 200
+
 @app.route('/api/calculate', methods=['POST'])
 def calculate():
+    """
+    Endpoint to calculate a mathematical expression.
+    Expects JSON: {"expression": "..."}
+    """
     global history_id_counter
     data = request.get_json()
+    
+    # Request validation
     if not data or 'expression' not in data:
         return jsonify({"success": False, "error": "No expression provided"}), 400
     
@@ -56,6 +76,7 @@ def calculate():
             "expression": expr
         }), 200
     except ValueError as e:
+        # Exception handling for invalid expressions or math errors
         return jsonify({
             "success": False,
             "error": str(e)
@@ -63,19 +84,29 @@ def calculate():
 
 @app.route('/api/history', methods=['GET'])
 def get_history():
+    """
+    Endpoint to retrieve the calculation history.
+    """
     return jsonify({"history": history}), 200
 
 @app.route('/api/history/<int:item_id>', methods=['DELETE'])
 def delete_history_item(item_id):
+    """
+    Endpoint to delete a specific item from the calculation history.
+    """
     global history
     history = [item for item in history if item["id"] != item_id]
     return jsonify({"success": True}), 200
 
 @app.route('/api/history', methods=['DELETE'])
 def clear_history():
+    """
+    Endpoint to clear all calculation history.
+    """
     global history
     history = []
     return jsonify({"success": True}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Ensure the application runs on port 8080 as per requirements
+    app.run(host='0.0.0.0', port=8080)
