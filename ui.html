@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculator</title>
+<style>
+  :root {
+    --bg: #f5f2ff;
+    --card: #ffffff;
+    --primary: #b39ddb;
+    --primary-dark: #9575cd;
+    --accent: #ffcc80;
+    --text: #4a4a4a;
+    --danger: #ef9a9a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .container {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .calculator {
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    padding: 24px;
+    width: 320px;
+  }
+  .display {
+    background: #f0ecff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    text-align: right;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .expression {
+    font-size: 14px;
+    color: #9e9e9e;
+    min-height: 18px;
+    word-wrap: break-word;
+  }
+  .result {
+    font-size: 32px;
+    color: var(--text);
+    font-weight: 600;
+    word-wrap: break-word;
+  }
+  .status {
+    font-size: 12px;
+    text-align: center;
+    margin-bottom: 12px;
+    padding: 6px;
+    border-radius: 8px;
+  }
+  .status.offline { background: #ffe0e0; color: #c62828; }
+  .status.online { background: #e0ffe0; color: #2e7d32; }
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  button {
+    border: none;
+    border-radius: 12px;
+    padding: 16px 0;
+    font-size: 18px;
+    cursor: pointer;
+    background: #f0ecff;
+    color: var(--text);
+    transition: transform 0.08s ease, background 0.2s ease;
+  }
+  button:hover { background: #e3d9ff; }
+  button:active { transform: scale(0.95); }
+  .op { background: var(--primary); color: white; }
+  .op:hover { background: var(--primary-dark); }
+  .equals { background: var(--accent); color: #5d4037; grid-column: span 2; }
+  .equals:hover { background: #ffb74d; }
+  .clear { background: var(--danger); color: white; }
+  .zero { grid-column: span 2; }
+  .adv { font-size: 15px; }
+ 
+  .history-panel {
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    padding: 24px;
+    width: 320px;
+    max-height: 480px;
+    display: flex;
+    flex-direction: column;
+  }
+  .history-panel h3 {
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .history-panel h3 button {
+    font-size: 12px;
+    padding: 6px 10px;
+    background: var(--danger);
+    color: white;
+    width: auto;
+  }
+  #historyList {
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .history-item {
+    background: #f7f5ff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .history-item .h-expr { color: #9e9e9e; }
+  .history-item .h-res { color: var(--text); font-weight: 600; }
+  .history-item .h-del {
+    background: none;
+    color: #ef9a9a;
+    font-size: 16px;
+    padding: 0 4px;
+    width: auto;
+  }
+  .empty-note {
+    color: #bbb;
+    font-size: 13px;
+    text-align: center;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+ 
+<div class="container">
+ 
+  <!-- CALCULATOR -->
+  <div class="calculator">
+    <div class="status offline" id="statusBar">⚠ Backend not connected</div>
+    <div class="display">
+      <div class="expression" id="expression"></div>
+      <div class="result" id="result">0</div>
+    </div>
+ 
+    <div class="buttons">
+      <button class="clear" onclick="clearAll()">C</button>
+      <button class="op" onclick="appendOp('%')">%</button>
+      <button class="op adv" onclick="appendOp('sqrt')">√</button>
+      <button class="op" onclick="appendOp('/')">÷</button>
+ 
+      <button onclick="appendNum('7')">7</button>
+      <button onclick="appendNum('8')">8</button>
+      <button onclick="appendNum('9')">9</button>
+      <button class="op" onclick="appendOp('*')">×</button>
+ 
+      <button onclick="appendNum('4')">4</button>
+      <button onclick="appendNum('5')">5</button>
+      <button onclick="appendNum('6')">6</button>
+      <button class="op" onclick="appendOp('-')">−</button>
+ 
+      <button onclick="appendNum('1')">1</button>
+      <button onclick="appendNum('2')">2</button>
+      <button onclick="appendNum('3')">3</button>
+      <button class="op" onclick="appendOp('+')">+</button>
+ 
+      <button class="zero" onclick="appendNum('0')">0</button>
+      <button onclick="appendNum('.')">.</button>
+      <button class="op adv" onclick="appendOp('pow')">x²</button>
+ 
+      <button class="equals" onclick="calculate()">=</button>
+    </div>
+  </div>
+ 
+  <!-- HISTORY -->
+  <div class="history-panel">
+    <h3>History <button onclick="clearHistory()">Clear All</button></h3>
+    <div id="historyList">
+      <div class="empty-note" id="emptyNote">No calculations yet</div>
+    </div>
+  </div>
+ 
+</div>
+ 
+<script>
+/*
+  ==========================================================
+  BACKEND API CONTRACT (for agent_v1_clean to implement)
+  ==========================================================
+  This frontend does NOT calculate anything itself.
+  Every "=" click sends the expression to the backend and
+  displays whatever the backend returns. Without the backend
+  running, the calculator will NOT produce results.
+ 
+  1) POST /api/calculate
+     Request body (JSON):
+       { "expression": "12+5*sqrt(9)" }
+     Success response (200):
+       { "success": true, "result": 27, "expression": "12+5*sqrt(9)" }
+     Error response (400):
+       { "success": false, "error": "Division by zero" }
+ 
+  2) GET /api/history
+     Success response (200):
+       { "history": [
+           { "id": 1, "expression": "12+5", "result": 17, "timestamp": "2026-07-31T10:00:00Z" }
+         ]
+       }
+ 
+  3) DELETE /api/history/<id>
+     Success response (200): { "success": true }
+ 
+  4) DELETE /api/history  (clear all)
+     Success response (200): { "success": true }
+  ==========================================================
+*/
+ 
+const API_BASE_URL = "http://localhost:5000"; // update after backend deploy
+ 
+let currentExpression = "";
+ 
+const resultEl = document.getElementById('result');
+const expressionEl = document.getElementById('expression');
+const statusBar = document.getElementById('statusBar');
+const historyListEl = document.getElementById('historyList');
+const emptyNoteEl = document.getElementById('emptyNote');
+ 
+function setOnline(isOnline) {
+  statusBar.textContent = isOnline ? "✓ Backend connected" : "⚠ Backend not connected";
+  statusBar.className = "status " + (isOnline ? "online" : "offline");
+}
+ 
+function appendNum(num) {
+  currentExpression += num;
+  updateDisplay();
+}
+ 
+function appendOp(op) {
+  if (op === 'sqrt') {
+    currentExpression += 'sqrt(';
+  } else if (op === 'pow') {
+    currentExpression += '**2';
+  } else {
+    currentExpression += op;
+  }
+  updateDisplay();
+}
+ 
+function clearAll() {
+  currentExpression = "";
+  updateDisplay();
+}
+ 
+function updateDisplay() {
+  expressionEl.textContent = currentExpression;
+  resultEl.textContent = currentExpression || "0";
+}
+ 
+// This is the ONLY place a result is produced — always via backend call.
+// There is no local math fallback here on purpose.
+async function calculate() {
+  if (!currentExpression) return;
+ 
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/calculate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expression: currentExpression })
+    });
+ 
+    const data = await response.json();
+    setOnline(true);
+ 
+    if (!response.ok || !data.success) {
+      resultEl.textContent = data.error || "Error";
+      currentExpression = "";
+      return;
+    }
+ 
+    expressionEl.textContent = currentExpression + " =";
+    resultEl.textContent = data.result;
+    currentExpression = String(data.result);
+ 
+    loadHistory();
+  } catch (err) {
+    setOnline(false);
+    resultEl.textContent = "Backend offline";
+    console.error(err);
+  }
+}
+ 
+async function loadHistory() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/history`);
+    const data = await response.json();
+    setOnline(true);
+    renderHistory(data.history || []);
+  } catch (err) {
+    setOnline(false);
+    console.error("History load failed:", err);
+  }
+}
+ 
+function renderHistory(items) {
+  historyListEl.innerHTML = "";
+  if (!items.length) {
+    historyListEl.appendChild(emptyNoteEl);
+    return;
+  }
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `
+      <div>
+        <div class="h-expr">${item.expression}</div>
+        <div class="h-res">= ${item.result}</div>
+      </div>
+      <button class="h-del" onclick="deleteHistoryItem(${item.id})">✕</button>
+    `;
+    historyListEl.appendChild(div);
+  });
+}
+ 
+async function deleteHistoryItem(id) {
+  try {
+    await fetch(`${API_BASE_URL}/api/history/${id}`, { method: 'DELETE' });
+    loadHistory();
+  } catch (err) {
+    console.error("Delete failed:", err);
+  }
+}
+ 
+async function clearHistory() {
+  try {
+    await fetch(`${API_BASE_URL}/api/history`, { method: 'DELETE' });
+    loadHistory();
+  } catch (err) {
+    console.error("Clear history failed:", err);
+  }
+}
+ 
+// Check backend connection on page load
+loadHistory();
+</script>
+ 
+</body>
+</html>
