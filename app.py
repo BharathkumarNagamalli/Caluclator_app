@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import math
 import datetime
@@ -39,7 +39,14 @@ def safe_eval(expr):
 @app.route('/', methods=['GET'])
 def index():
     """
-    Root endpoint to verify the backend is running.
+    Serve the calculator UI page.
+    """
+    return send_from_directory(os.path.dirname(__file__), 'ui.html')
+
+@app.route('/health', methods=['GET'])
+def health():
+    """
+    Health check endpoint for the backend.
     """
     return jsonify({"message": "Calculator Backend is running."}), 200
 
